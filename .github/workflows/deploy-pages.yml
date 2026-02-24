@@ -1,0 +1,70 @@
+# Build Flutter web with secrets and deploy to GitHub Pages.
+# Repo secrets required: APP_PIN, API_PASSWORD, SERVER_DOMAIN (optional: SERVER_TYPE, SERVER_PATH)
+# Enable Pages: Settings → Pages → Source: GitHub Actions
+
+name: Build and deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.0"
+          channel: "stable"
+          cache: true
+
+      - name: Create .env from secrets
+        env:
+          APP_PIN: ${{ secrets.APP_PIN }}
+          API_PASSWORD: ${{ secrets.API_PASSWORD }}
+          SERVER_DOMAIN: ${{ secrets.SERVER_DOMAIN }}
+          SERVER_TYPE: ${{ secrets.SERVER_TYPE }}
+          SERVER_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          echo "APP_PIN=$APP_PIN" >> .env
+          echo "API_PASSWORD=$API_PASSWORD" >> .env
+          echo "SERVER_DOMAIN=$SERVER_DOMAIN" >> .env
+          echo "SERVER_TYPE=${SERVER_TYPE:-https}" >> .env
+          echo "SERVER_PATH=${SERVER_PATH:-}" >> .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web
+        run: flutter build web --base-href "/mycms/"
+        # If your repo is user.github.io (Pages root), use: flutter build web
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
