@@ -7,7 +7,7 @@ class MyTheme {
     primarySwatch: Colors.teal,
     scaffoldBackgroundColor: Colors.white,
     fontFamily: "Poppins",
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: Colors.tealAccent,
       shadowColor: Colors.black,
       elevation: 12,
